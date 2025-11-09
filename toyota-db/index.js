@@ -22,7 +22,7 @@ const cars = [
     { model: "Hilux", year: 2025, price: 36000, fuelType: "Gasoline", colors: ["Black", "Silver"], type: "Truck", seats: 5, image: "https://drive.google.com/file/d/1sYLJgSfcNC2svTbzUAopWIWgg09yAXxN/view?usp=sharing" },
     { model: "Mirai", year: 2024, price: 50000, fuelType: "Hydrogen", colors: ["Blue", "White"], type: "Sedan", seats: 5, image: "https://drive.google.com/file/d/1kZfhMdkc8y8yYpYVv2xMOUzbnVG8WudR/view?usp=sharing" },
     { model: "Crown", year: 2025, price: 47000, fuelType: "Hybrid", colors: ["Black", "Red"], type: "Sedan", seats: 5, image: "https://drive.google.com/file/d/1FAOx3WhNPsrhv5tHIgKsoSNvohaKKgkl/view?usp=sharing" },
-    { model: "bZ4X", year: 2024, price: 42000, fuelType: "Electric", colors: ["White", "Silver"], type: "SUV", seats: 5, image: "https://drive.google.com/file/d/1yn9FXK_ChQFhKD_TAzqN3EX8R0PaThCh/view?usp=share_link" }
+    { model: "bZ4X", year: 2024, price: 42000, fuelType: "Electric", colors: ["White", "Silver"], type: "SUV", seats: 5, image: "https://drive.google.com/file/d/1yn9FXK_ChQFhKD_TAzqN3EX8R0PaThCh/view?usp=sharing" }
 ];
   
 
