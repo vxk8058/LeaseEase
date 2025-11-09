@@ -183,25 +183,22 @@ app.post("/process", async (req, res) => {
 
     if (!user_text) return res.status(400).json({ error: "Missing user_text" });
 
-    // Build dynamic query
     const query = buildQueryFromText(user_text);
     console.log("Querying Atlas with:", query);
 
-    // Query MongoDB Atlas
     const resultsArray = await carsCollection.find(query).toArray();
 
-    // Convert array to object — keyed by _id
     const resultsObject = {};
     resultsArray.forEach((car, index) => {
       resultsObject[car._id?.toString() || `car_${index + 1}`] = car;
     });
 
-    // Respond with structured object
+    
     res.json({
       message: "Processed successfully (Direct Atlas Query)",
       user_text,
       mongo_query: query,
-      results: resultsObject, // 👈 frontend can map keys directly into boxes
+      results: resultsObject
     });
   } catch (err) {
     console.error("Error:", err);
@@ -210,9 +207,7 @@ app.post("/process", async (req, res) => {
 });
 
 
-// ------------------------------
-// Server start
-// ------------------------------
+
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
