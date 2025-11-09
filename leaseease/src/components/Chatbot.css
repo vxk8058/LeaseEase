@@ -1,3 +1,10 @@
+.chat-shell{width:100%;max-width:980px;margin:20px auto}
+.chat-stage{background:transparent;padding:16px 28px;border-radius:12px;min-height:420px}
+.assistant-bubble{max-width:65%;background:#fff;border-radius:18px;padding:14px 18px;color:#111;margin:18px 0;box-shadow:0 6px 18px rgba(0,0,0,0.18);position:relative}
+.assistant-bubble::after{content:'';position:absolute;left:18px;bottom:-10px;border-width:10px 10px 0 0;border-style:solid;border-color:#fff transparent transparent transparent}
+.user-bubble{max-width:65%;background:#0f2336;border-radius:18px;padding:14px 18px;color:#fff;margin:18px 0;margin-left:auto;position:relative}
+.user-bubble::after{content:'';position:absolute;right:18px;bottom:-10px;border-width:10px 0 0 10px;border-style:solid;border-color:transparent transparent transparent #0f2336}
+.center-mic{width:96px;height:96px;border-radius:50%;background:linear-gradient(180deg,#ff6b6b,#ff2b2b);border:none;color:#fff;font-size:36px;box-shadow:0 12px 30px rgba(0,0,0,0.4)}
 .chat-shell {
   position: relative;
   z-index: 1;
