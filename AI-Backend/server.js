@@ -1,0 +1,97 @@
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const { MongoClient } = require("mongodb");
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+
+const mongoClient = new MongoClient(process.env.MONGO_URI);
+let db, carsCollection;
+
+async function connectToDB() {
+  try {
+    await mongoClient.connect();
+    db = mongoClient.db("toyota-db"); // your database name
+    carsCollection = db.collection("Toyota-cars"); // your collection name
+    console.log("Connected to MongoDB Atlas");
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+  }
+}
+
+
+const sessions = {};
+
+
+function buildQueryFromText(text) {
+  const query = {};
+  const lower = text.toLowerCase();
+
+  // Make / brand
+  if (lower.includes("toyota")) query.model = { $regex: "Toyota", $options: "i" };
+  if (lower.includes("corolla")) query.model = { $regex: "Corolla", $options: "i" };
+  if (lower.includes("camry")) query.model = { $regex: "Camry", $options: "i" };
+  if (lower.includes("rav4")) query.model = { $regex: "RAV4", $options: "i" };
+
+  // Fuel type
+  if (lower.includes("hybrid")) query.fuelType = { $regex: "Hybrid", $options: "i" };
+  if (lower.includes("gas") || lower.includes("gasoline")) query.fuelType = { $regex: "Gasoline", $options: "i" };
+  if (lower.includes("electric")) query.fuelType = { $regex: "Electric", $options: "i" };
+
+  // Car type
+  if (lower.includes("sedan")) query.type = { $regex: "Sedan", $options: "i" };
+  if (lower.includes("suv")) query.type = { $regex: "SUV", $options: "i" };
+  if (lower.includes("truck")) query.type = { $regex: "Truck", $options: "i" };
+  if (lower.includes("hatchback")) query.type = { $regex: "Hatchback", $options: "i" };
+
+  // Seats
+  const seatMatch = text.match(/(\d+)\s*(seater|seats?)/i);
+  if (seatMatch) query.seats = Number(seatMatch[1]);
+
+  // Year
+  const yearMatch = text.match(/(19|20)\d{2}/);
+  if (yearMatch) query.year = Number(yearMatch[0]);
+
+  // Budget / price
+  const priceMatch = text.match(/under\s*(\d+)/i) || text.match(/below\s*(\d+)/i) || text.match(/less than\s*(\d+)/i);
+  if (priceMatch) query.price = { $lte: Number(priceMatch[1]) };
+
+  return query;
+}
+
+
+app.post("/process", async (req, res) => {
+  try {
+    const { user_text, sessionId = "default_user" } = req.body;
+
+    if (!user_text) return res.status(400).json({ error: "Missing user_text" });
+    if (!sessions[sessionId]) sessions[sessionId] = {};
+
+    // Build dynamic query from input text
+    const query = buildQueryFromText(user_text);
+    console.log("🔍 Querying Atlas with:", query);
+
+    // Run query (no artificial limit)
+    const results = await carsCollection.find(query).toArray();
+
+    res.json({
+      message: "Processed successfully (Direct Atlas Query)",
+      user_text,
+      mongo_query: query,
+      results,
+    });
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+const PORT = process.env.PORT || 5050;
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+  await connectToDB();
+});
