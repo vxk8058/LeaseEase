@@ -118,9 +118,10 @@ export function useChatbot() {
     // show what the user said (raw transcription) in UI
     pushUser(raw);
 
-    // Log accepted (normalized) answer to server-side file (non-blocking)
+    // Log accepted answer to server-side file
     try {
-      fetch('http://localhost:5001/api/log-response', {
+      // use relative path so CRA dev server can proxy to the backend (see package.json proxy)
+      fetch('/api/log-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionKey: q.key, questionPrompt: q.prompt, answer: normalized }),
