@@ -22,12 +22,10 @@ function App(){
   useEffect(() => {
     const clearOnExit = () => {
       try {
-        const url = 'http://localhost:5001/api/clear-responses';
+        const url = '/api/clear-responses';
         if (navigator && navigator.sendBeacon) {
-          // sendBeacon is recommended for unload
           navigator.sendBeacon(url, '');
         } else {
-          // best-effort fetch with keepalive
           fetch(url, { method: 'POST', keepalive: true }).catch(() => {});
         }
       } catch (e) {

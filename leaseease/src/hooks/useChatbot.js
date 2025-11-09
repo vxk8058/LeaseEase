@@ -111,7 +111,7 @@ export function useChatbot() {
     // show what the user said (raw transcription) in UI
     pushUser(raw);
 
-    // Log accepted (normalized) answer to server-side file (non-blocking)
+    // Log accepted answer to server-side file
     try {
       fetch('/api/log-response', {
         method: 'POST',
