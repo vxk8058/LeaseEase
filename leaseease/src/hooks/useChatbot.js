@@ -14,12 +14,27 @@ const QUESTIONS = [
 ];
 
 function computeMonthly(principal, annualRate, months) {
-  const P = Number(principal) || 0;
-  const r = (Number(annualRate) || 0) / 100 / 12;
-  const n = Number(months) || 1;
-  if (r <= 0) return (P / n) || 0;
-  const monthly = (P * r) / (1 - Math.pow(1 + r, -n));
-  return monthly;
+  // Safer parsing and clear formula using the multiplier approach described.
+  const P = parseFloat(principal) || 0;
+  const annual = parseFloat(annualRate) || 0;
+  const n = Math.max(1, Math.floor(Number(months) || 0));
+  const r = annual / 100 / 12; // monthly rate
+
+  if (n <= 0 || P <= 0) return 0;
+
+  // zero (or effectively zero) interest fallback
+  if (r <= 0) {
+    const flat = P / n;
+    return Math.round(flat * 100) / 100;
+  }
+
+  // multiplier = r*(1+r)^n / ((1+r)^n - 1)
+  const onePlusRpowN = Math.pow(1 + r, n);
+  const multiplier = (r * onePlusRpowN) / (onePlusRpowN - 1);
+  const monthly = P * multiplier;
+
+  // round to cents
+  return Math.round(monthly * 100) / 100;
 }
 
 export function useChatbot() {
@@ -75,28 +90,40 @@ export function useChatbot() {
   const handleAnswer = useCallback(async (text) => {
     const idx = Math.max(0, step - 1);
     const q = QUESTIONS[idx];
-    const value = (text || '').trim();
+    const raw = (text || '').trim();
 
-    if (!value) {
+    if (!raw) {
       pushUser('(no response)');
       setAwaitingRetry(true);
       await pushAssistant("I didn't get that, please answer again.");
       return;
-    } else {
-      setAwaitingRetry(false);
     }
 
-    // build new answers object (so we can use it synchronously)
-    const newAnswers = { ...answers, [q.key]: value };
-    setAnswers(newAnswers);
-    pushUser(value);
+    // validate and normalize the answer based on question type
+    const validation = validateAnswerForKey(q.key, raw, answers);
+    if (!validation.ok) {
+      // show the raw reply and ask for clarification
+      pushUser(raw || '(no response)');
+      setAwaitingRetry(true);
+      await pushAssistant(validation.message || "I didn't get that, please answer again.");
+      return;
+    }
 
-    // Log accepted (non-empty) answer to server-side file (non-blocking)
+    setAwaitingRetry(false);
+    const normalized = validation.value;
+
+    // build new answers object (store normalized values)
+    const newAnswers = { ...answers, [q.key]: normalized };
+    setAnswers(newAnswers);
+    // show what the user said (raw transcription) in UI
+    pushUser(raw);
+
+    // Log accepted (normalized) answer to server-side file (non-blocking)
     try {
       fetch('http://localhost:5001/api/log-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionKey: q.key, questionPrompt: q.prompt, answer: value }),
+        body: JSON.stringify({ questionKey: q.key, questionPrompt: q.prompt, answer: normalized }),
       }).catch((e) => {
         // swallow errors — logging is best-effort
         console.warn('Failed to log response', e);
@@ -160,6 +187,137 @@ export function useChatbot() {
     { id: 'assistant', role: 'assistant', text: assistantText },
     { id: 'user', role: 'user', text: userText },
   ], [assistantText, userText]);
+
+  // --- input parsing / validation helpers ---
+  const numberWords = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9,
+    ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19,
+    twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90
+  };
+
+  function wordsToNumber(text){
+    if (!text) return null;
+    const cleaned = text.toLowerCase().replace(/-/g,' ').replace(/ and /g,' ');
+    // handle decimals 'point'
+    if (cleaned.includes('point')){
+      const [intPart, fracPart] = cleaned.split('point').map(s=>s.trim());
+      const intVal = wordsToNumber(intPart);
+      if (intVal === null) return null;
+      // fractional: map each token to a single digit if possible
+      const fracTokens = fracPart.split(/\s+/);
+      let fracStr = '';
+      for (const t of fracTokens){
+        if (numberWords[t] !== undefined){
+          const digit = numberWords[t];
+          // only single-digit words make sense here
+          fracStr += String(digit % 10);
+        } else if (/^\d$/.test(t)){
+          fracStr += t;
+        } else {
+          // can't parse further
+          break;
+        }
+      }
+      const fracVal = fracStr ? Number('0.'+fracStr) : 0;
+      return intVal + fracVal;
+    }
+
+    const tokens = cleaned.match(/\w+/g) || [];
+    let total = 0;
+    let current = 0;
+    for (const tok of tokens){
+      if (numberWords[tok] !== undefined){
+        current += numberWords[tok];
+      } else if (tok === 'hundred'){
+        current = current === 0 ? 100 : current * 100;
+      } else if (tok === 'thousand'){
+        current = current === 0 ? 1000 : current * 1000;
+        total += current;
+        current = 0;
+      } else if (tok === 'million'){
+        current = current === 0 ? 1000000 : current * 1000000;
+        total += current;
+        current = 0;
+      } else {
+        // unknown token – stop parsing
+        break;
+      }
+    }
+    return (total + current) || null;
+  }
+
+  function parseNumericInput(raw){
+    if (!raw) return null;
+    const s = String(raw).toLowerCase().trim();
+    // reject obvious time stamps like 7:20
+    if (s.includes(':')) return null;
+    // handle percent words
+    const percentMatch = s.match(/(-?\d+[\d,\.]*)\s*%/);
+    if (percentMatch) return Number(percentMatch[1].replace(/,/g,''));
+    if (s.includes('percent')){
+      const m = s.match(/(-?[\d,\.]+)|([a-z\-\s]+)/);
+      if (m){
+        const num = m[1] ? Number(m[1].replace(/,/g,'')) : wordsToNumber(m[2]);
+        return num === null ? null : num;
+      }
+    }
+    // look for digits first
+    const digitMatch = s.match(/-?\d{1,3}(?:,\d{3})*(?:\.\d+)?|-?\d+\.\d+/);
+    if (digitMatch) return Number(digitMatch[0].replace(/,/g,''));
+    // fallback to words
+    const wordNum = wordsToNumber(s);
+    return wordNum === null ? null : wordNum;
+  }
+
+  function validateAnswerForKey(key, raw, currentAnswers){
+    const trimmed = (raw || '').trim();
+    if (!trimmed) return { ok: false, message: "I didn't get that, please answer again." };
+    switch (key){
+      case 'buyOrLease': {
+        const r = trimmed.toLowerCase();
+        if (r.includes('buy')) return { ok: true, value: 'buy' };
+        if (r.includes('lease')) return { ok: true, value: 'lease' };
+        return { ok: false, message: 'Please say "buy" or "lease".' };
+      }
+      case 'salary': {
+        const num = parseNumericInput(trimmed);
+        if (num === null || isNaN(num) || num < 0) return { ok: false, message: 'Please say your yearly salary as a number, for example 85000.' };
+        return { ok: true, value: Math.round(num) };
+      }
+      case 'totalBudget': {
+        const num = parseNumericInput(trimmed);
+        if (num === null || isNaN(num) || num <= 0) return { ok: false, message: 'Please state your total budget as a dollar amount, for example 35000.' };
+        return { ok: true, value: Math.round(num) };
+      }
+      case 'creditScore': {
+        const num = parseNumericInput(trimmed);
+        if (num === null || isNaN(num) || num < 250 || num > 900) return { ok: false, message: 'Please say your credit score as a number, for example 720.' };
+        return { ok: true, value: Math.round(num) };
+      }
+      case 'interestRate': {
+        let num = parseNumericInput(trimmed);
+        if (num === null || isNaN(num)) return { ok: false, message: 'Please say the interest rate as a percent, for example 6 or 6 percent.' };
+        // handle 0.06 -> 6
+        if (Math.abs(num) <= 1) num = num * 100;
+        if (num <= 0 || num > 100) return { ok: false, message: 'Please provide a realistic annual interest rate (like 6).' };
+        return { ok: true, value: Number(num) };
+      }
+      case 'downPayment': {
+        const num = parseNumericInput(trimmed);
+        if (num === null || isNaN(num) || num < 0) return { ok: false, message: 'Please state the down payment as a dollar amount, for example 3500.' };
+        return { ok: true, value: Math.round(num) };
+      }
+      case 'loanTerm': {
+        const num = parseNumericInput(trimmed);
+        if (num === null || isNaN(num)) return { ok: false, message: 'Please say the loan term in months, for example 60.' };
+        const months = Math.round(num);
+        if (months <= 0 || months > 600) return { ok: false, message: 'Please provide a reasonable term in months (e.g. 36, 48, 60).' };
+        return { ok: true, value: months };
+      }
+      default:
+        return { ok: true, value: trimmed };
+    }
+  }
 
   return {
     isTyping,
