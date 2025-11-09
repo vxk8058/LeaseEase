@@ -151,12 +151,12 @@ function buildQueryFromText(text) {
 
   // Color filter
   const colorList = ["white", "black", "blue", "red", "silver", "gray", "green", "yellow"];
-  for (const color of colorList) {
-    if (lower.includes(color)) {
-      query.colors = { $regex: color, $options: "i" };
-      break;
-    }
+  const matchedColors = colorList.filter(color => lower.includes(color));
+  if (matchedColors.length > 0) {
+    // Match any of the colors in an OR condition
+    query.colors = { $in: matchedColors.map(c => new RegExp(c, "i")) };
   }
+
 
   // Seats
   const seatMatch = text.match(/(\d+)\s*(seater|seats?)/i);
