@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import sampleCars from '../data/sampleCars';
+// Removed hardcoded sample data; we will fetch matches from the DB API
 import { speak, preloadAudio, listen } from '../speech';
 
 const QUESTIONS = [
@@ -72,14 +72,7 @@ export function useChatbot() {
     setUserText(text || '(no response)');
   }, []);
 
-  // small helper for matching cars
-  const getMatches = useCallback((answersObj) => {
-    const budget = Number(answersObj.totalBudget) || 30000;
-    const affordable = sampleCars.filter((c) => c.price <= budget);
-    let picks = affordable.length ? affordable : sampleCars.slice().sort((a, b) => a.price - b.price).slice(0, 5);
-    picks = picks.sort((a, b) => Math.abs(a.price - budget) - Math.abs(b.price - budget)).slice(0, 5);
-    return picks;
-  }, []);
+  // We'll fetch matches from the toyota-db API server instead of using hardcoded data
 
   const startConversation = useCallback(async () => {
     setStep(1);
@@ -120,7 +113,7 @@ export function useChatbot() {
 
     // Log accepted (normalized) answer to server-side file (non-blocking)
     try {
-      fetch('http://localhost:5001/api/log-response', {
+      fetch('/api/log-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionKey: q.key, questionPrompt: q.prompt, answer: normalized }),
@@ -149,13 +142,32 @@ export function useChatbot() {
 
       await pushAssistant(`This is your estimated monthly payment: $${Math.round(m)}`);
       await pushAssistant('Based on your responses, here are a few Toyota options:');
-      const found = getMatches(newAnswers);
-      setMatches(found);
+      // Fetch matching cars from the local toyota-db API server
+      try {
+        const resp = await fetch(`/api/cars?maxMonthly=${encodeURIComponent(m)}&limit=5`);
+        const data = await resp.json();
+        console.debug('Fetched /api/cars ->', data);
+        // support both proxy shape ({ok:true,cars:[]}) and direct results (results array)
+        if (data && data.ok && Array.isArray(data.cars)) {
+          setMatches(data.cars);
+        } else if (Array.isArray(data.results)) {
+          setMatches(data.results);
+        } else if (Array.isArray(data)) {
+          setMatches(data);
+        } else {
+          // fallback: empty
+          console.warn('Unexpected /api/cars response shape', data);
+          setMatches([]);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch cars from API', e);
+        setMatches([]);
+      }
       // inform user that recommendations are shown below
       await pushAssistant('I found a few Toyota options — see the list below.');
       setStep(QUESTIONS.length + 1);
     }
-  }, [answers, step, pushUser, pushAssistant, getMatches]);
+  }, [answers, step, pushUser, pushAssistant]);
 
   // toggle listening from UI (central mic)
   const toggleListening = useCallback(async () => {

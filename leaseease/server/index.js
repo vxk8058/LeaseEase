@@ -20,7 +20,7 @@ try {
 }
 
 const ELEVEN_API_KEY = process.env.ELEVEN_API_KEY;
-const ELEVEN_VOICE_ID = 'Qggl4b0xRMiqOwhPtVWT'; // Default voice, can be changed
+const ELEVEN_VOICE_ID = 'si0svtk05vPEuvwAW93c'; // Default voice, can be changed
 
 app.post('/api/tts', async (req, res) => {
   const { text } = req.body;
@@ -81,6 +81,20 @@ app.all('/api/clear-responses', (req, res) => {
   } catch (err) {
     console.error('Failed to clear responses file:', err);
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// Proxy endpoint: forward /api/cars to the toyota-db API server
+app.get('/api/cars', async (req, res) => {
+  try {
+    const { maxMonthly, limit } = req.query;
+    const url = `http://localhost:5002/cars?maxMonthly=${encodeURIComponent(maxMonthly || '')}&limit=${encodeURIComponent(limit || 5)}`;
+    const resp = await axios.get(url);
+    if (resp && resp.data) return res.json(resp.data);
+    return res.status(502).json({ error: 'Invalid response from toyota-db' });
+  } catch (err) {
+    console.error('Proxy /api/cars error:', err.message || err);
+    return res.status(500).json({ error: err.message || 'Proxy error' });
   }
 });
 

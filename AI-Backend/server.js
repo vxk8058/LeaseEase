@@ -143,8 +143,8 @@ function calculateAffordability(responses) {
 
   return {
     principal,
-    monthlyPayment: monthlyPayment.toFixed(2),
-    totalPayment: totalPayment.toFixed(2)
+    monthlyPayment: Number(monthlyPayment.toFixed(2)),
+    totalPayment: Number(totalPayment.toFixed(2))
   };
 }
 
@@ -173,7 +173,34 @@ app.get("/recommendCars", async (req, res) => {
     console.log("Affordability:", affordability);
     console.log("MongoDB Query:", query);
 
-    const cars = await carsCollection.find(query).toArray();
+    // Now find cars whose stored monthlyEstimate is <= the user's monthly payment
+    const monthly = Number(affordability.monthlyPayment) || 0;
+    const limit = 5;
+
+    // Projection to return only the needed fields
+    const proj = { projection: { model: 1, year: 1, price: 1, type: 1, monthlyEstimate: 1, image: 1 } };
+
+    let cars = await carsCollection.find({ monthlyEstimate: { $lte: monthly }, ...query }, proj)
+      .sort({ monthlyEstimate: 1 })
+      .limit(limit)
+      .toArray();
+
+    // If fewer than requested, add nearest above-threshold monthly estimates
+    if (cars.length < limit) {
+      const needed = limit - cars.length;
+      const above = await carsCollection.find({ monthlyEstimate: { $gt: monthly }, ...query }, proj)
+        .sort({ monthlyEstimate: 1 })
+        .limit(needed)
+        .toArray();
+      cars = cars.concat(above).slice(0, limit);
+    }
+
+    // Final fallback: if still fewer, add by ascending price to fill up
+    if (cars.length < limit) {
+      const needed = limit - cars.length;
+      const byPrice = await carsCollection.find(query, proj).sort({ price: 1 }).limit(needed).toArray();
+      cars = cars.concat(byPrice).slice(0, limit);
+    }
 
     res.json({
       message: "Car recommendations based on user's responses",

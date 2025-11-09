@@ -2,8 +2,68 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 const Car = require('./models/Car');
 
+// Helper function to calculate monthly payment
+function computeMonthly(principal, annualRate, months) {
+  const P = parseFloat(principal) || 0;
+  const annual = parseFloat(annualRate) || 0;
+  const n = Math.max(1, Math.floor(Number(months) || 0));
+  const r = annual / 100 / 12; // monthly rate
+
+  if (n <= 0 || P <= 0) return 0;
+
+  // zero (or effectively zero) interest fallback
+  if (r <= 0) {
+    const flat = P / n;
+    return Math.round(flat * 100) / 100;
+  }
+
+  // multiplier = r*(1+r)^n / ((1+r)^n - 1)
+  const onePlusRpowN = Math.pow(1 + r, n);
+  const multiplier = (r * onePlusRpowN) / (onePlusRpowN - 1);
+  const monthly = P * multiplier;
+
+  // round to cents
+  return Math.round(monthly * 100) / 100;
+}
+
+// Common financing scenarios to pre-calculate
+const financingScenarios = [
+  { downPayment: 0, annualRate: 5, loanTerm: 60 },      // 0 down, 5% APR, 60 months
+  { downPayment: 5000, annualRate: 5, loanTerm: 60 },   // $5k down, 5% APR, 60 months
+  { downPayment: 10000, annualRate: 5, loanTerm: 60 },  // $10k down, 5% APR, 60 months
+  { downPayment: 0, annualRate: 3, loanTerm: 36 },      // 0 down, 3% APR, 36 months
+  { downPayment: 0, annualRate: 7, loanTerm: 72 }       // 0 down, 7% APR, 72 months
+];
+
+// Function to update a single car with monthly estimates
+async function updateCarWithEstimates(car) {
+  const monthlyEstimates = financingScenarios.map(scenario => ({
+    ...scenario,
+    monthlyPayment: computeMonthly(car.price - scenario.downPayment, scenario.annualRate, scenario.loanTerm)
+  }));
+
+  return Car.findByIdAndUpdate(
+    car._id,
+    { $set: { monthlyEstimates } },
+    { new: true }
+  );
+}
+
 const cars = [
-    { model: "Corolla", year: 2024, price: 22000, fuelType: "Gasoline", colors: ["Red", "White", "Blue"], type: "Sedan", seats: 5, image: "https://drive.google.com/file/d/11P92TClLUYaRHVOlL0vyC71j7zv8wIED/view?usp=sharing" },
+    { 
+      model: "Corolla", 
+      year: 2024, 
+      price: 22000, 
+      fuelType: "Gasoline", 
+      colors: ["Red", "White", "Blue"], 
+      type: "Sedan", 
+      seats: 5, 
+      image: "https://drive.google.com/file/d/11P92TClLUYaRHVOlL0vyC71j7zv8wIED/view?usp=sharing",
+      monthlyEstimates: financingScenarios.map(scenario => ({
+        ...scenario,
+        monthlyPayment: computeMonthly(22000 - scenario.downPayment, scenario.annualRate, scenario.loanTerm)
+      }))
+    },
     { model: "Camry", year: 2025, price: 28000, fuelType: "Hybrid", colors: ["Black", "Silver"], type: "Sedan", seats: 5 , image: "https://drive.google.com/file/d/1R_go_V7WyhRg04t8Tne73qeHVHUcDIeK/view?usp=sharing" },
     { model: "RAV4", year: 2023, price: 30000, fuelType: "Gasoline", colors: ["White", "Gray"], type: "SUV", seats: 5, image: "https://drive.google.com/file/d/1-V0Wb6k1PAgKT7W9LBhqcZ0xllJv3u3z/view?usp=sharing" },
     { model: "Highlander", year: 2024, price: 42000, fuelType: "Hybrid", colors: ["Black", "Blue"], type: "SUV", seats: 7, image: "https://drive.google.com/file/d/1sYLJgSfcNC2svTbzUAopWIWgg09yAXxN/view?usp=sharing" },
@@ -26,21 +86,29 @@ const cars = [
 ];
   
 
+// Connect to MongoDB and update all cars with monthly estimates
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("Connected to MongoDB");
 
-    // Delete all existing entries first
-    await Car.deleteMany({});
-    console.log("Old entries deleted");
+    try {
+      // Get all cars from MongoDB
+      const cars = await Car.find({});
+      console.log(`Found ${cars.length} cars in database`);
 
-    // Insert new entries
-    await Car.insertMany(cars);
-    console.log("New car data inserted successfully");
+      // Update each car with monthly estimates
+      const updatePromises = cars.map(car => updateCarWithEstimates(car));
+      await Promise.all(updatePromises);
 
-    mongoose.connection.close();
+      console.log("Successfully updated all cars with monthly estimates");
+    } catch (error) {
+      console.error("Error updating cars:", error);
+    } finally {
+      await mongoose.connection.close();
+      console.log("MongoDB connection closed");
+    }
   })
-  .catch(err => console.error("Error:", err));
+  .catch(err => console.error("Connection Error:", err));
 
 // Car.insertMany(cars)
 //     .then(() => console.log("20+ Toyota Mock cars added with pictures!"))

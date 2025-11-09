@@ -8,7 +8,8 @@ const carSchema = new mongoose.Schema({
     colors: [String],
     type: String,
     seats: Number,
-    image: String
-}, { versionKey: false });;
+    image: String,
+    monthlyEstimate: Number  // Single monthly estimate based on car's price
+}, { versionKey: false });
 
 module.exports = mongoose.model('ToyotaCar', carSchema, 'Toyota-cars');

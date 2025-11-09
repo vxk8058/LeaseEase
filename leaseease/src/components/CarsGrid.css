@@ -1,5 +1,10 @@
 .cars-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:12px}
-.car-card{width:180px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#fff}
-.car-name{font-weight:600;margin-bottom:6px}
+.car-card{width:220px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#fff;display:flex;gap:12px;align-items:flex-start}
+.car-image-wrap{width:72px;height:56px;flex:0 0 72px;display:flex;align-items:center;justify-content:center}
+.car-image{max-width:100%;max-height:56px;display:block}
+.car-info{flex:1}
+.car-name{font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.car-year{font-size:12px;color:#666;font-weight:600}
 .car-price{color:#0a66c2;font-weight:700}
 .car-meta{font-size:13px;color:#666;margin-top:6px}
+.car-monthly{margin-top:8px;color:#111}
