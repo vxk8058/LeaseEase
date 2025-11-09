@@ -59,7 +59,7 @@
   </style>
 </head>
 <body>
-  <h1>🚗 LeaseEase Car Recommendations</h1>
+  <h1>LeaseEase Car Recommendations</h1>
   <button id="fetchBtn">Fetch Recommendations</button>
 
   <div id="output"></div>
@@ -80,22 +80,22 @@
 
         output.innerHTML = `
           <div class="section">
-            <h2>📋 Responses</h2>
+            <h2>Responses</h2>
             <pre>${JSON.stringify(data.responses, null, 2)}</pre>
           </div>
 
           <div class="section">
-            <h2>💰 Affordability</h2>
+            <h2>Affordability</h2>
             <pre>${JSON.stringify(data.affordability, null, 2)}</pre>
           </div>
 
           <div class="section">
-            <h2>🔍 MongoDB Query</h2>
+            <h2>MongoDB Query</h2>
             <pre>${JSON.stringify(data.mongo_query, null, 2)}</pre>
           </div>
 
           <div class="section">
-            <h2>🚘 Car Results</h2>
+            <h2>Car Results</h2>
             ${
               data.results && data.results.length > 0
                 ? data.results
