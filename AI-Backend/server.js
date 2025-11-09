@@ -188,14 +188,20 @@ app.post("/process", async (req, res) => {
     console.log("Querying Atlas with:", query);
 
     // Query MongoDB Atlas
-    const results = await carsCollection.find(query).toArray();
+    const resultsArray = await carsCollection.find(query).toArray();
 
-    // Respond with results (includes image URLs automatically)
+    // Convert array to object — keyed by _id
+    const resultsObject = {};
+    resultsArray.forEach((car, index) => {
+      resultsObject[car._id?.toString() || `car_${index + 1}`] = car;
+    });
+
+    // Respond with structured object
     res.json({
       message: "Processed successfully (Direct Atlas Query)",
       user_text,
       mongo_query: query,
-      results,
+      results: resultsObject, // 👈 frontend can map keys directly into boxes
     });
   } catch (err) {
     console.error("Error:", err);
@@ -203,8 +209,9 @@ app.post("/process", async (req, res) => {
   }
 });
 
+
 // ------------------------------
-// 🚀 Server start
+// Server start
 // ------------------------------
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, async () => {
