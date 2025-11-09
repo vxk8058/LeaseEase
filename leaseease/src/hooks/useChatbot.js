@@ -7,7 +7,7 @@ const QUESTIONS = [
   { key: 'buyOrLease', prompt: 'Would you like to buy or lease the car?' },
   { key: 'salary', prompt: 'What is your yearly salary?' },
   { key: 'totalBudget', prompt: 'What is your total budget for the car?' },
-  { key: 'creditScore', prompt: 'What is your credit score range?' },
+  { key: 'creditScore', prompt: 'What is your credit score?' },
   { key: 'interestRate', prompt: 'What interest rate do you expect (annual percent)?' },
   { key: 'downPayment', prompt: 'How much will you put as a downpayment?' },
   { key: 'loanTerm', prompt: 'Loan term in months?' },
