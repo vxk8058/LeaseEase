@@ -1,0 +1,9 @@
+{
+  "name": "leaseease-root",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix leaseease start",
+    "start:server": "npm --prefix server start"
+  }
+}

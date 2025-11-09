@@ -1,0 +1,5 @@
+.cars-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:12px}
+.car-card{width:180px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#fff}
+.car-name{font-weight:600;margin-bottom:6px}
+.car-price{color:#0a66c2;font-weight:700}
+.car-meta{font-size:13px;color:#666;margin-top:6px}

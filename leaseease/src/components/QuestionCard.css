@@ -1,0 +1,21 @@
+.qe-card{
+  width: 80%;
+  max-width:800px;
+  margin: 20px auto;
+  padding: 18px;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+}
+.qe-bubble{
+  background:#f4f4f4;
+  padding:14px;
+  border-radius:10px;
+  font-size:18px;
+  margin-bottom:14px;
+}
+.qe-center{display:flex;align-items:center;gap:18px}
+.qe-mic{width:82px;height:82px;border-radius:50%;font-size:32px;border:none;background:#222;color:#fff}
+.qe-example{font-size:14px;color:#666}
+.qe-answer{margin-top:12px;color:#333}
