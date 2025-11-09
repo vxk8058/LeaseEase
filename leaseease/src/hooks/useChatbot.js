@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import sampleCars from '../data/sampleCars';
 import { speak, preloadAudio, listen } from '../speech';
 
@@ -13,7 +13,7 @@ const QUESTIONS = [
   { key: 'loanTerm', prompt: 'Loan term in months?' },
 ];
 
-function computeMonthly(principal, annualRate, months){
+function computeMonthly(principal, annualRate, months) {
   const P = Number(principal) || 0;
   const r = (Number(annualRate) || 0) / 100 / 12;
   const n = Number(months) || 1;
@@ -22,113 +22,112 @@ function computeMonthly(principal, annualRate, months){
   return monthly;
 }
 
-export function useChatbot(){
-  const [messages, setMessages] = useState([]); // {id, role, text}
-  const [step, setStep] = useState(0); // index into QUESTIONS, 0 = not started
-  const [isTyping, setIsTyping] = useState(false); // TTS playing
+export function useChatbot() {
+  // Keep exactly two visible bubbles by tracking assistantText and userText
+  const [assistantText, setAssistantText] = useState(QUESTIONS[0].prompt);
+  const [userText, setUserText] = useState('Tap the mic to speak and I will translate it here.');
+  const [step, setStep] = useState(0); // 0 = not started, 1..N are question indexes+1
+  const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [answers, setAnswers] = useState({});
+  const [matches, setMatches] = useState([]);
+
   const messagesEndRef = useRef(null);
 
-  // scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // preload first question audio
+  // preload first question audio and common phrases
   useEffect(() => {
     preloadAudio(QUESTIONS[0].prompt);
     preloadAudio('This is your estimated monthly payment:');
   }, []);
 
   const pushAssistant = useCallback(async (text) => {
-    const id = Date.now() + Math.random();
-    setMessages((m) => [...m, { id, role: 'assistant', text }]);
+    setAssistantText(text);
+    setIsTyping(true);
     try {
-      setIsTyping(true);
       await speak(text);
     } catch (err) {
-      console.warn('TTS error', err);
+      console.warn('TTS failed', err);
     } finally {
       setIsTyping(false);
     }
   }, []);
 
   const pushUser = useCallback((text) => {
-    const id = Date.now() + Math.random();
-    setMessages((m) => [...m, { id, role: 'user', text }]);
+    setUserText(text || '(no response)');
+  }, []);
+
+  // small helper for matching cars
+  const getMatches = useCallback((answersObj) => {
+    const budget = Number(answersObj.totalBudget) || 30000;
+    const affordable = sampleCars.filter((c) => c.price <= budget);
+    let picks = affordable.length ? affordable : sampleCars.slice().sort((a, b) => a.price - b.price).slice(0, 5);
+    picks = picks.sort((a, b) => Math.abs(a.price - budget) - Math.abs(b.price - budget)).slice(0, 5);
+    return picks;
   }, []);
 
   const startConversation = useCallback(async () => {
-    if (step > 0) return;
     setStep(1);
     await pushAssistant(QUESTIONS[0].prompt);
-  }, [step, pushAssistant]);
+  }, [pushAssistant]);
 
   // handles captured answer text and advances the flow
   const handleAnswer = useCallback(async (text) => {
     const idx = Math.max(0, step - 1);
     const q = QUESTIONS[idx];
     const value = (text || '').trim();
-    setAnswers((s) => ({ ...s, [q.key]: value }));
+
+    // build new answers object (so we can use it synchronously)
+    const newAnswers = { ...answers, [q.key]: value };
+    setAnswers(newAnswers);
     pushUser(value || '(no response)');
 
     const next = idx + 1;
-    if (next < QUESTIONS.length){
+    if (next < QUESTIONS.length) {
       setStep(next + 1);
-      // preload next
+      // preload next prompt
       preloadAudio(QUESTIONS[next].prompt);
       await pushAssistant(QUESTIONS[next].prompt);
     } else {
       // finished: compute payment and show
-      const budget = Number((answers.totalBudget || value)) || 0;
-      const down = Number(answers.downPayment || 0) || 0;
+      const budget = Number(newAnswers.totalBudget) || 0;
+      const down = Number(newAnswers.downPayment || 0) || 0;
       const principal = Math.max(0, budget - down);
-      const rate = Number(answers.interestRate || 0) || 0;
-      const term = Number(value) || 60;
+      const rate = Number(newAnswers.interestRate || 0) || 0;
+      const term = Number(newAnswers.loanTerm || 60) || 60;
       const m = computeMonthly(principal, rate, term);
+
       await pushAssistant(`This is your estimated monthly payment: $${Math.round(m)}`);
-      // show recommendations
-      const matches = getMatches({ ...answers, loanTerm: value });
       await pushAssistant('Based on your responses, here are a few Toyota options:');
-      matches.forEach((c) => pushAssistant(`${c.name} — $${c.price.toLocaleString()}`));
+      const found = getMatches(newAnswers);
+      setMatches(found);
+      // inform user that recommendations are shown below
+      await pushAssistant('I found a few Toyota options — see the list below.');
       setStep(QUESTIONS.length + 1);
     }
-  }, [answers, step, pushUser, pushAssistant]);
-
-  // small helper for matching cars
-  function getMatches(answersObj){
-    const budget = Number(answersObj.totalBudget) || 30000;
-    const affordable = sampleCars.filter(c => c.price <= budget);
-    let picks = affordable.length ? affordable : sampleCars.slice().sort((a,b)=>a.price-b.price).slice(0,5);
-    picks = picks.sort((a,b)=> Math.abs(a.price - budget) - Math.abs(b.price - budget)).slice(0,5);
-    return picks;
-  }
+  }, [answers, step, pushUser, pushAssistant, getMatches]);
 
   // toggle listening from UI (central mic)
   const toggleListening = useCallback(async () => {
-    // if currently speaking, ignore
     if (isTyping) return;
 
-    // if not started, start conversation
-    if (step === 0){
+    if (step === 0) {
       await startConversation();
       return;
     }
 
-    // start listening for answer to current question
-    if (isListening) {
-      // If already listening, ignore toggle
-      return;
-    }
+    if (isListening) return;
 
     setIsListening(true);
     try {
-      const text = await listen({ timeout: 10000 });
-      await handleAnswer(text || '');
+      const text = await listen({ timeout: 15000 });
+      let finalText = (text || '').trim();
+      if (!finalText) {
+        const retry = await listen({ timeout: 8000 });
+        finalText = (retry || '').trim();
+      }
+      await handleAnswer(finalText);
     } catch (err) {
       console.warn('Listen failed', err);
-      // push empty user reply and continue
       await handleAnswer('');
     } finally {
       setIsListening(false);
@@ -137,12 +136,18 @@ export function useChatbot(){
 
   const voiceSupported = typeof (window.SpeechRecognition || window.webkitSpeechRecognition) !== 'undefined';
 
+  const messages = useMemo(() => [
+    { id: 'assistant', role: 'assistant', text: assistantText },
+    { id: 'user', role: 'user', text: userText },
+  ], [assistantText, userText]);
+
   return {
     isTyping,
     isListening,
     toggleListening,
     voiceSupported,
     messages,
+    matches,
     messagesEndRef,
     startConversation,
   };
