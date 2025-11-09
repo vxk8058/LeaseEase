@@ -7,7 +7,8 @@ const carSchema = new mongoose.Schema({
     fuelType: String,
     colors: [String],
     type: String,
-    seats: Number
-});
+    seats: Number,
+    image: String
+}, { versionKey: false });;
 
 module.exports = mongoose.model('ToyotaCar', carSchema, 'Toyota-cars');
