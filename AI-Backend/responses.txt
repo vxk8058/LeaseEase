@@ -1,0 +1,8 @@
+2025-11-09T11:41:25.445Z	name	Hi there! I am LeaseEase Assistant. May I have your name?	Lisa
+2025-11-09T11:41:30.579Z	buyOrLease	Would you like to buy or lease the car?	lease
+2025-11-09T11:41:36.121Z	salary	What is your yearly salary?	85000
+2025-11-09T11:41:41.623Z	totalBudget	What is your total budget for the car?	30000
+2025-11-09T11:41:55.921Z	creditScore	What is your credit score?	700
+2025-11-09T11:42:13.226Z	interestRate	What interest rate do you expect (annual percent)?	2
+2025-11-09T11:42:25.742Z	downPayment	How much will you put as a downpayment?	2000
+2025-11-09T11:42:31.424Z	loanTerm	Loan term in months?	48

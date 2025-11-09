@@ -2,33 +2,128 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LeaseEase Backend Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeaseEase Car Recommendations</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #004aad;
+    }
+    .section {
+      background: #fff;
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    .car-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      background: #fafafa;
+    }
+    .car-card img {
+      width: 120px;
+      height: 80px;
+      object-fit: cover;
+      margin-right: 15px;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #004aad;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #00398c;
+    }
+  </style>
 </head>
 <body>
-  <h2>Test the /process endpoint</h2>
+  <h1>🚗 LeaseEase Car Recommendations</h1>
+  <button id="fetchBtn">Fetch Recommendations</button>
 
-  <input id="text" placeholder="e.g. Toyota hybrid under 30000" style="width:350px;" />
-  <button onclick="send()">Send</button>
+  <div id="output"></div>
 
-  <pre id="output"></pre>
- 
   <script>
-    async function send() {
-      const input = document.getElementById("text").value;
-      document.getElementById("output").textContent = "Loading...";
+    document.getElementById("fetchBtn").addEventListener("click", async () => {
+      const output = document.getElementById("output");
+      output.innerHTML = "<p>Loading results...</p>";
+
       try {
-        const res = await fetch("http://localhost:5050/process", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_text: input, sessionId: "web_test" })
-        });
+        const res = await fetch("http://localhost:5050/recommendCars");
         const data = await res.json();
-        document.getElementById("output").textContent =
-          JSON.stringify(data, null, 2);
+
+        if (data.error) {
+          output.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+          return;
+        }
+
+        output.innerHTML = `
+          <div class="section">
+            <h2>📋 Responses</h2>
+            <pre>${JSON.stringify(data.responses, null, 2)}</pre>
+          </div>
+
+          <div class="section">
+            <h2>💰 Affordability</h2>
+            <pre>${JSON.stringify(data.affordability, null, 2)}</pre>
+          </div>
+
+          <div class="section">
+            <h2>🔍 MongoDB Query</h2>
+            <pre>${JSON.stringify(data.mongo_query, null, 2)}</pre>
+          </div>
+
+          <div class="section">
+            <h2>🚘 Car Results</h2>
+            ${
+              data.results && data.results.length > 0
+                ? data.results
+                    .map(
+                      car => `
+                      <div class="car-card">
+                        <img src="${car.image || ''}" alt="${car.model}" />
+                        <div>
+                          <h3>${car.model} (${car.year})</h3>
+                          <p><strong>Price:</strong> $${car.price}</p>
+                          <p><strong>Fuel Type:</strong> ${car.fuelType}</p>
+                          <p><strong>Type:</strong> ${car.type}</p>
+                          <p><strong>Seats:</strong> ${car.seats}</p>
+                          <p><strong>Colors:</strong> ${car.colors.join(", ")}</p>
+                        </div>
+                      </div>
+                    `
+                    )
+                    .join("")
+                : "<p>No matching cars found.</p>"
+            }
+          </div>
+        `;
       } catch (err) {
-        document.getElementById("output").textContent = err.message;
+        console.error(err);
+        output.innerHTML = `<p style="color:red;">Failed to connect to server.</p>`;
       }
-    }
+    });
   </script>
 </body>
 </html>
