@@ -1,23 +1,30 @@
-import logo from './logo.svg';
 import './App.css';
+import './components/Chatbot.css';
+
+import { ChatHeader } from './components/ChatHeader';
+import { ChatInput } from './components/ChatInput';
+import { useChatbot } from './hooks/useChatbot';
 
 function App() {
+  const {
+    isTyping,
+    isListening,
+    toggleListening,
+    voiceSupported,
+    messages,
+    messagesEndRef,
+  } = useChatbot();
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <div className="chat-shell">
+        <ChatHeader />
+        <ChatInput
+          isListening={isListening}
+          onToggleListening={toggleListening}
+          voiceSupported={voiceSupported}
+        />
+      </div>
     </div>
   );
 }
