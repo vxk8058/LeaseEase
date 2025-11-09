@@ -8,6 +8,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const fs = require('fs');
+const path = require('path');
+const RESPONSES_FILE = path.join(__dirname, 'responses.txt');
+
+// ensure file exists
+try {
+  if (!fs.existsSync(RESPONSES_FILE)) fs.writeFileSync(RESPONSES_FILE, '');
+} catch (e) {
+  console.warn('Could not ensure responses file:', e.message);
+}
+
 const ELEVEN_API_KEY = process.env.ELEVEN_API_KEY;
 const ELEVEN_VOICE_ID = 'Qggl4b0xRMiqOwhPtVWT'; // Default voice, can be changed
 
@@ -39,6 +50,50 @@ app.post('/api/tts', async (req, res) => {
     res.send(response.data);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Append a user response to the responses.txt file
+app.post('/api/log-response', async (req, res) => {
+  try {
+    const { questionKey, questionPrompt, answer } = req.body || {};
+    if (!answer) return res.status(400).json({ error: 'No answer provided' });
+    const timestamp = new Date().toISOString();
+    const line = `${timestamp}\t${questionKey || ''}\t${questionPrompt || ''}\t${answer}\n`;
+    fs.appendFile(RESPONSES_FILE, line, (err) => {
+      if (err) {
+        console.error('Failed to append response:', err);
+        return res.status(500).json({ error: 'Failed to write response' });
+      }
+      console.log('Appended response to', RESPONSES_FILE);
+      return res.json({ ok: true });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear the responses file (support GET/POST for convenience)
+app.all('/api/clear-responses', (req, res) => {
+  try {
+    fs.writeFileSync(RESPONSES_FILE, '');
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Failed to clear responses file:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Return current responses file content for debugging
+app.get('/api/responses', (req, res) => {
+  try {
+    const data = fs.readFileSync(RESPONSES_FILE, 'utf8');
+    res.set('Content-Type', 'text/plain');
+    return res.send(data);
+  } catch (err) {
+    console.error('Failed to read responses file:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 

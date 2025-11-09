@@ -31,6 +31,7 @@ export function useChatbot() {
   const [isListening, setIsListening] = useState(false);
   const [answers, setAnswers] = useState({});
   const [matches, setMatches] = useState([]);
+  const [awaitingRetry, setAwaitingRetry] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -76,10 +77,33 @@ export function useChatbot() {
     const q = QUESTIONS[idx];
     const value = (text || '').trim();
 
+    if (!value) {
+      pushUser('(no response)');
+      setAwaitingRetry(true);
+      await pushAssistant("I didn't get that, please answer again.");
+      return;
+    } else {
+      setAwaitingRetry(false);
+    }
+
     // build new answers object (so we can use it synchronously)
     const newAnswers = { ...answers, [q.key]: value };
     setAnswers(newAnswers);
-    pushUser(value || '(no response)');
+    pushUser(value);
+
+    // Log accepted (non-empty) answer to server-side file (non-blocking)
+    try {
+      fetch('http://localhost:5001/api/log-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionKey: q.key, questionPrompt: q.prompt, answer: value }),
+      }).catch((e) => {
+        // swallow errors — logging is best-effort
+        console.warn('Failed to log response', e);
+      });
+    } catch (e) {
+      console.warn('Failed to call log endpoint', e);
+    }
 
     const next = idx + 1;
     if (next < QUESTIONS.length) {
@@ -120,11 +144,7 @@ export function useChatbot() {
     setIsListening(true);
     try {
       const text = await listen({ timeout: 15000 });
-      let finalText = (text || '').trim();
-      if (!finalText) {
-        const retry = await listen({ timeout: 8000 });
-        finalText = (retry || '').trim();
-      }
+      const finalText = (text || '').trim();
       await handleAnswer(finalText);
     } catch (err) {
       console.warn('Listen failed', err);
@@ -150,6 +170,7 @@ export function useChatbot() {
     matches,
     messagesEndRef,
     startConversation,
+    awaitingRetry,
   };
 }
 
