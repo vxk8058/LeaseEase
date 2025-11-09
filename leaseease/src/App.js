@@ -2,7 +2,7 @@ import React from 'react';
 import './App.css';
 import './components/Chatbot.css';
 
-import ChatHeader from './components/ChatHeader';
+import { ChatHeader } from './components/ChatHeader';
 import ChatMessages from './components/ChatMessages';
 import ChatInput from './components/ChatInput';
 import CarsGrid from './components/CarsGrid';
@@ -26,7 +26,7 @@ function App(){
         <div className="cars-container">
           {matches && matches.length > 0 && <CarsGrid cars={matches} />}
         </div>
-        <div style={{display:'flex',justifyContent:'center',padding:'28px 0'}}>
+        <div style={{display:'flex',justifyContent:'center'}}>
           <ChatInput isListening={isListening} onToggleListening={toggleListening} voiceSupported={voiceSupported} />
         </div>
       </div>
