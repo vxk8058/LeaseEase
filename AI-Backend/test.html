@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LeaseEase Car Recommendations</title>
+  <title>LeaseEase Car Recommendations (Raw JSON View)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -19,30 +19,16 @@
       background: #fff;
       padding: 15px 20px;
       border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       margin-bottom: 20px;
     }
     pre {
       background: #f0f0f0;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
       overflow-x: auto;
-    }
-    .car-card {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      background: #fafafa;
-    }
-    .car-card img {
-      width: 120px;
-      height: 80px;
-      object-fit: cover;
-      margin-right: 15px;
-      border-radius: 5px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
     button {
       background-color: #004aad;
@@ -59,7 +45,7 @@
   </style>
 </head>
 <body>
-  <h1>LeaseEase Car Recommendations</h1>
+  <h1>LeaseEase Car Recommendations (Raw JSON)</h1>
   <button id="fetchBtn">Fetch Recommendations</button>
 
   <div id="output"></div>
@@ -78,45 +64,26 @@
           return;
         }
 
+        // ✅ Show each section as raw JSON text
         output.innerHTML = `
           <div class="section">
-            <h2>Responses</h2>
+            <h2>🧍 User Responses</h2>
             <pre>${JSON.stringify(data.responses, null, 2)}</pre>
           </div>
 
           <div class="section">
-            <h2>Affordability</h2>
+            <h2>💰 Affordability</h2>
             <pre>${JSON.stringify(data.affordability, null, 2)}</pre>
           </div>
 
           <div class="section">
-            <h2>MongoDB Query</h2>
+            <h2>🧮 MongoDB Query</h2>
             <pre>${JSON.stringify(data.mongo_query, null, 2)}</pre>
           </div>
 
           <div class="section">
-            <h2>Car Results</h2>
-            ${
-              data.results && data.results.length > 0
-                ? data.results
-                    .map(
-                      car => `
-                      <div class="car-card">
-                        <img src="${car.image || ''}" alt="${car.model}" />
-                        <div>
-                          <h3>${car.model} (${car.year})</h3>
-                          <p><strong>Price:</strong> $${car.price}</p>
-                          <p><strong>Fuel Type:</strong> ${car.fuelType}</p>
-                          <p><strong>Type:</strong> ${car.type}</p>
-                          <p><strong>Seats:</strong> ${car.seats}</p>
-                          <p><strong>Colors:</strong> ${car.colors.join(", ")}</p>
-                        </div>
-                      </div>
-                    `
-                    )
-                    .join("")
-                : "<p>No matching cars found.</p>"
-            }
+            <h2>🚗 Car Results (Raw JSON)</h2>
+            <pre>${JSON.stringify(data.results, null, 2)}</pre>
           </div>
         `;
       } catch (err) {
