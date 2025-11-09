@@ -15,10 +15,8 @@ export function ChatInput({ isListening, onToggleListening, voiceSupported }) {
               : 'Start voice message'
             : 'Voice input not supported'}
         </span>
-        <span className="mic-icon" aria-hidden="true">
-          <span className="mic-head" />
-          <span className="mic-stem" />
-          <span className="mic-base" />
+        <span className="mic-image-wrapper" aria-hidden="true">
+          <img className="mic-image" src="/microphone.png" alt="" />
           <span className="mic-pulse" />
         </span>
       </button>
