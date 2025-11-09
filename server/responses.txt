@@ -1,0 +1,2 @@
+{"timestamp":"2025-11-09T08:16:46.818Z","payload":{"questionKey":"name","questionPrompt":"What is your name?","answer":"Alice"}}
+{"timestamp":"2025-11-09T08:17:58.530Z","payload":{"questionKey":"name","questionPrompt":"Hi there! I am LeaseEase Assistant. May I have your name?","answer":"shut up"}}
