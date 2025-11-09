@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LeaseEase Backend Test</title>
+</head>
+<body>
+  <h2>Test the /process endpoint</h2>
+
+  <input id="text" placeholder="e.g. Toyota hybrid under 30000" style="width:350px;" />
+  <button onclick="send()">Send</button>
+
+  <pre id="output"></pre>
+
+  <script>
+    async function send() {
+      const input = document.getElementById("text").value;
+      document.getElementById("output").textContent = "Loading...";
+      try {
+        const res = await fetch("http://localhost:5050/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_text: input, sessionId: "web_test" })
+        });
+        const data = await res.json();
+        document.getElementById("output").textContent =
+          JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("output").textContent = err.message;
+      }
+    }
+  </script>
+</body>
+</html>
