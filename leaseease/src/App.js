@@ -3,6 +3,7 @@ import './components/Chatbot.css';
 
 import { ChatHeader } from './components/ChatHeader';
 import { ChatInput } from './components/ChatInput';
+import { ConversationTranscript } from './components/ConversationTranscript';
 import { useChatbot } from './hooks/useChatbot';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
     <div className="App">
       <div className="chat-shell">
         <ChatHeader />
+        <ConversationTranscript messages={messages} />
         <ChatInput
           isListening={isListening}
           onToggleListening={toggleListening}
