@@ -1,35 +1,38 @@
+// Evironment variables and dependencies
 require("dotenv").config();
+
+// Core modules 
 const express = require("express");
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
 const fs = require("fs");
 const path = require("path");
 
+// Intialize Express 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔹 MongoDB connection
+// Setup MongoDB connection
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db, carsCollection;
 
+// Stores references 
 async function connectToDB() {
   try {
     await mongoClient.connect();
-    db = mongoClient.db("toyota-db"); // your database name
-    carsCollection = db.collection("Toyota-cars"); // your collection name
+    db = mongoClient.db("toyota-db"); 
+    carsCollection = db.collection("Toyota-cars"); 
     console.log("Connected to MongoDB Atlas");
   } catch (err) {
     console.error("MongoDB connection error:", err);
   }
 }
 
-// Serve static files (like test.html)
+
 app.use(express.static(__dirname));
 
-//
-// 🔹 PART 1: Text Query Parser (existing)
-//
+// Query builder -> convert from voice to text to MongoDB query
 function buildQueryFromText(text) {
   const query = {};
   const lower = text.toLowerCase();
@@ -78,6 +81,7 @@ function buildQueryFromText(text) {
   return query;
 }
 
+// Accept process response.txt file, parse, and build query
 app.post("/process", async (req, res) => {
   try {
     const { user_text } = req.body;
@@ -86,6 +90,7 @@ app.post("/process", async (req, res) => {
     const query = buildQueryFromText(user_text);
     console.log("Querying Atlas with:", query);
 
+    //structures response
     const results = await carsCollection.find(query).toArray();
 
     res.json({
@@ -128,6 +133,7 @@ function parseResponsesFile() {
   return responses;
 }
 
+// Affordability calculator based on user responses
 function calculateAffordability(responses) {
   const totalBudget = Number(responses.totalBudget) || 0;
   const downPayment = Number(responses.downPayment) || 0;
@@ -148,6 +154,7 @@ function calculateAffordability(responses) {
   };
 }
 
+// Build MongoDB query based on user responses
 function buildQueryFromResponses(responses) {
   const query = {};
   const totalBudget = Number(responses.totalBudget);
@@ -159,7 +166,7 @@ function buildQueryFromResponses(responses) {
 
   return query;
 }
-
+// Fetches cars based on affordability and user responses
 app.get("/recommendCars", async (req, res) => {
   try {
     const responses = parseResponsesFile();
@@ -188,9 +195,7 @@ app.get("/recommendCars", async (req, res) => {
   }
 });
 
-//
-// 🔹 Server Startup (auto-fix busy port)
-//
+// Fixes ports conflicts -> Goes to next if current busy
 const DEFAULT_PORT = process.env.PORT || 5050;
 
 function startServer(port = DEFAULT_PORT) {
