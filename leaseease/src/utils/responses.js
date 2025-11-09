@@ -2,7 +2,7 @@ export const initialMessages = [
   {
     id: 'welcome',
     sender: 'assistant',
-    text: 'Hi there! I am LeaseEase Assistant. Ask me anything about your leasing journey.',
+    text: 'Hi there! I am LeaseEase Assistant. May I have your name?',
     timestamp: new Date().toISOString(),
   },
 ];
