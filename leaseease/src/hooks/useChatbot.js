@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import sampleCars from '../data/sampleCars';
 import { speak, preloadAudio, listen } from '../speech';
 
 const QUESTIONS = [
@@ -70,15 +69,6 @@ export function useChatbot() {
 
   const pushUser = useCallback((text) => {
     setUserText(text || '(no response)');
-  }, []);
-
-  // small helper for matching cars
-  const getMatches = useCallback((answersObj) => {
-    const budget = Number(answersObj.totalBudget) || 30000;
-    const affordable = sampleCars.filter((c) => c.price <= budget);
-    let picks = affordable.length ? affordable : sampleCars.slice().sort((a, b) => a.price - b.price).slice(0, 5);
-    picks = picks.sort((a, b) => Math.abs(a.price - budget) - Math.abs(b.price - budget)).slice(0, 5);
-    return picks;
   }, []);
 
   const startConversation = useCallback(async () => {
@@ -192,7 +182,7 @@ export function useChatbot() {
       await pushAssistant('I found a few Toyota options — see the list below.');
       setStep(QUESTIONS.length + 1);
     }
-  }, [answers, step, pushUser, pushAssistant, getMatches]);
+  }, [answers, step, pushUser, pushAssistant]);
 
   // toggle listening from UI (central mic)
   const toggleListening = useCallback(async () => {

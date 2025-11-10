@@ -3,7 +3,7 @@ export function ChatHeader() {
     <header className="chat-header">
       <div className="brand-lockup">
         <div aria-hidden="true" className="brand-emblem">
-          <img src="/logo192.png" alt="" />
+          <img src="/toyota-logo.png" alt="" />
         </div>
         <div className="brand-text">
           <h1>Toyota LeaseEase Assistant</h1>

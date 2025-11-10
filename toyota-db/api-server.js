@@ -10,9 +10,35 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5002;
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Connected to MongoDB (api-server)'))
-  .catch(err => console.error('MongoDB connect error:', err));
+// Connect to MongoDB if MONGO_URI is available
+if (process.env.MONGO_URI) {
+  mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('Connected to MongoDB (api-server)'))
+    .catch(err => console.error('MongoDB connect error:', err));
+} else {
+  console.warn('MONGO_URI not set - using fallback data only');
+}
+
+// Helper function to calculate monthly payment estimate
+// Assumes: 6% annual interest rate, 60 month term, 10% down payment
+function calculateMonthlyEstimate(price) {
+  const downPaymentPercent = 0.10;
+  const annualRate = 0.06;
+  const months = 60;
+  
+  const principal = price * (1 - downPaymentPercent);
+  const monthlyRate = annualRate / 12;
+  
+  if (monthlyRate <= 0) {
+    return Math.round((principal / months) * 100) / 100;
+  }
+  
+  const multiplier = (monthlyRate * Math.pow(1 + monthlyRate, months)) / 
+                     (Math.pow(1 + monthlyRate, months) - 1);
+  const monthly = principal * multiplier;
+  
+  return Math.round(monthly * 100) / 100;
+}
 
 // Simple in-memory fallback dataset used when MongoDB is unreachable.
 // Keep fields the frontend expects: model, year, price, type, monthlyEstimate, image
@@ -61,35 +87,47 @@ app.get('/cars', async (req, res) => {
       return res.json({ ok: true, cars });
     }
 
+    // Helper to add monthlyEstimate to cars
+    const addMonthlyEstimate = (cars) => {
+      return cars.map(car => ({
+        ...car,
+        monthlyEstimate: car.monthlyEstimate || calculateMonthlyEstimate(car.price || 0)
+      }));
+    };
+
     if (isNaN(maxMonthly)) {
       // If maxMonthly not provided, return top N cars sorted by price ascending
-      const cars = await Car.find({}).sort({ price: 1 }).limit(limit).lean();
+      let cars = await Car.find({}).sort({ price: 1 }).limit(limit).lean();
+      cars = addMonthlyEstimate(cars);
       return res.json({ ok: true, cars });
     }
 
-    // Find cars where monthlyEstimate exists and is <= maxMonthly
-    let cars = await Car.find({ monthlyEstimate: { $lte: maxMonthly } })
-      .sort({ monthlyEstimate: 1 })
-      .limit(limit)
-      .lean();
+    // Fetch all cars and add monthlyEstimate, then filter
+    let allCars = await Car.find({}).lean();
+    allCars = addMonthlyEstimate(allCars);
+
+    // Find cars where monthlyEstimate <= maxMonthly
+    let cars = allCars
+      .filter(c => c.monthlyEstimate <= maxMonthly)
+      .sort((a, b) => a.monthlyEstimate - b.monthlyEstimate)
+      .slice(0, limit);
 
     // If we have fewer than requested, fetch nearest alternatives (monthly > maxMonthly)
     if (cars.length < limit) {
       const needed = limit - cars.length;
+      const above = allCars
+        .filter(c => c.monthlyEstimate > maxMonthly)
+        .sort((a, b) => a.monthlyEstimate - b.monthlyEstimate)
+        .slice(0, needed);
 
-      // Try to fetch cars with monthlyEstimate > maxMonthly sorted by monthlyEstimate ascending
-      const above = await Car.find({ monthlyEstimate: { $gt: maxMonthly } })
-        .sort({ monthlyEstimate: 1 })
-        .limit(needed)
-        .lean();
-
-      // Combine results: matching first, then near-above
       cars = cars.concat(above).slice(0, limit);
 
-      // If still fewer (e.g., some docs missing monthlyEstimate), fallback to nearest by price
+      // If still fewer (shouldn't happen), fallback to nearest by price
       if (cars.length < limit) {
         const stillNeeded = limit - cars.length;
-        const byPrice = await Car.find({}).sort({ price: 1 }).limit(stillNeeded).lean();
+        const byPrice = allCars
+          .sort((a, b) => a.price - b.price)
+          .slice(0, stillNeeded);
         cars = cars.concat(byPrice).slice(0, limit);
       }
     }
