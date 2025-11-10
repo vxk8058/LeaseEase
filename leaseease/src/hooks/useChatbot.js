@@ -150,8 +150,52 @@ export function useChatbot() {
 
       await pushAssistant(`This is your estimated monthly payment: $${Math.round(m)}`);
       await pushAssistant('Based on your responses, here are a few Toyota options:');
+<<<<<<< Updated upstream
       const found = getMatches(newAnswers);
       setMatches(found);
+=======
+      // Fetch matching cars from the local toyota-db API server
+      try {
+        const resp = await fetch(`/api/cars?maxMonthly=${encodeURIComponent(m)}&limit=5`);
+        if (!resp.ok) {
+          // Trigger fallback to direct API
+          throw new Error(`proxy ${resp.status}`);
+        }
+        const data = await resp.json();
+        console.debug('Fetched /api/cars ->', data);
+        if (data && data.ok && Array.isArray(data.cars)) {
+          setMatches(data.cars);
+        } else if (Array.isArray(data.results)) {
+          setMatches(data.results);
+        } else if (Array.isArray(data)) {
+          setMatches(data);
+        } else {
+          console.warn('Unexpected /api/cars response shape', data);
+          setMatches([]);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch cars from proxy, attempting direct toyota-db', e);
+        try {
+          const direct = await fetch(`http://localhost:5002/cars?maxMonthly=${encodeURIComponent(m)}&limit=5`);
+          if (!direct.ok) throw new Error(`toyota-db ${direct.status}`);
+          const data2 = await direct.json();
+          console.debug('Fetched toyota-db direct ->', data2);
+          if (data2 && data2.ok && Array.isArray(data2.cars)) {
+            setMatches(data2.cars);
+          } else if (Array.isArray(data2.results)) {
+            setMatches(data2.results);
+          } else if (Array.isArray(data2)) {
+            setMatches(data2);
+          } else {
+            console.warn('Unexpected toyota-db response shape', data2);
+            setMatches([]);
+          }
+        } catch (e2) {
+          console.warn('Fallback to toyota-db direct failed', e2);
+          setMatches([]);
+        }
+      }
+>>>>>>> Stashed changes
       // inform user that recommendations are shown below
       await pushAssistant('I found a few Toyota options — see the list below.');
       setStep(QUESTIONS.length + 1);

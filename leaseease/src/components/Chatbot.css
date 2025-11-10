@@ -12,7 +12,6 @@
   min-height: 72vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  
 }
 
 .chat-header {

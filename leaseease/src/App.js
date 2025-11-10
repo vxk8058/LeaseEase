@@ -18,7 +18,7 @@ function App(){
     messagesEndRef,
   } = useChatbot();
 
-  // clear responses file when the app/window is closed
+  // remove responses file when the app/window is closed
   useEffect(() => {
     const clearOnExit = () => {
       try {
