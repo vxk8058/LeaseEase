@@ -107,8 +107,6 @@ app.all('/api/clear-responses', (req, res) => {
   }
 });
 
-<<<<<<< Updated upstream
-=======
 // Proxy endpoint: forward /api/cars to the toyota-db API server
 app.get('/api/cars', async (req, res) => {
   const { maxMonthly, limit } = req.query;
@@ -139,10 +137,6 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Default to 5001 since frontend expects the proxy on that port in dev
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`ElevenLabs proxy server running on port ${PORT}`);

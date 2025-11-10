@@ -150,17 +150,10 @@ export function useChatbot() {
 
       await pushAssistant(`This is your estimated monthly payment: $${Math.round(m)}`);
       await pushAssistant('Based on your responses, here are a few Toyota options:');
-<<<<<<< Updated upstream
-      const found = getMatches(newAnswers);
-      setMatches(found);
-=======
-      // Fetch matching cars from the local toyota-db API server
+      // Fetch matching cars from the local toyota-db API server (proxy)
       try {
         const resp = await fetch(`/api/cars?maxMonthly=${encodeURIComponent(m)}&limit=5`);
-        if (!resp.ok) {
-          // Trigger fallback to direct API
-          throw new Error(`proxy ${resp.status}`);
-        }
+        if (!resp.ok) throw new Error(`proxy ${resp.status}`);
         const data = await resp.json();
         console.debug('Fetched /api/cars ->', data);
         if (data && data.ok && Array.isArray(data.cars)) {
@@ -195,7 +188,6 @@ export function useChatbot() {
           setMatches([]);
         }
       }
->>>>>>> Stashed changes
       // inform user that recommendations are shown below
       await pushAssistant('I found a few Toyota options — see the list below.');
       setStep(QUESTIONS.length + 1);
