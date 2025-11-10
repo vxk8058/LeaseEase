@@ -35,6 +35,10 @@ if (!ELEVEN_API_KEY) {
   console.warn('Warning: ELEVEN_API_KEY is not set in environment. TTS calls will fail until it is provided.');
 }
 
+if (!ELEVEN_API_KEY) {
+  console.warn('Warning: ELEVEN_API_KEY is not set in environment. TTS calls will fail until it is provided.');
+}
+
 app.post('/api/tts', async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'No text provided' });
@@ -135,6 +139,9 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Default to 5001 since frontend expects the proxy on that port in dev
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
